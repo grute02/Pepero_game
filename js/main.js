@@ -5,7 +5,7 @@ import { challengeUrl, readChallenge, canvasToFile, shareFile, shareLink } from 
 
 const $ = (id) => document.getElementById(id);
 const el = {
-  len: $('len'), status: $('status'), result: $('result'),
+  len: $('len'), goal: $('goal'), status: $('status'), result: $('result'),
   rDiff: $('rDiff'), rNote: $('rNote'), rChal: $('rChal'),
   again: $('again'), shareCard: $('shareCard'), shareLink: $('shareLink'),
   stage: $('stage'), cv: $('cv'), flash: $('flash'),
@@ -28,7 +28,12 @@ let last = null;
 let cardFile = null;
 let challenge = readChallenge();
 let T = readTokens();
-let W = 0, H = 0;
+let W = 0, H = 0, inset = 0;
+
+// Bottom safe-area inset (home indicator), so the stick stays clear of the readout on notched phones.
+const insetProbe = document.createElement('div');
+insetProbe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding-bottom:env(safe-area-inset-bottom,0px)';
+document.body.append(insetProbe);
 
 const store = createStore(() => { renderWho(); renderBoard(); renderNote(); });
 
@@ -44,6 +49,7 @@ function start() {
   last = null;
   cardFile = null;
   el.result.hidden = true;
+  el.goal.hidden = false;
   el.status.hidden = false;
   el.status.textContent = '탭하면 멈춰요';
   if (round.p.variant === 'wobble') showFlash(VARIANTS.wobble.flash);
@@ -57,7 +63,7 @@ function loop(now) {
     L = advance(round, (now - t0) / 1000);
     while (seenEvents < round.events.length) showFlash(VARIANTS[round.events[seenEvents++].type].flash);
     el.len.textContent = round3(L).toFixed(3);
-    if (!reduceMQ.matches) spawnCrumbs(crumbs, W, H, L, 2);
+    if (!reduceMQ.matches) spawnCrumbs(crumbs, W, H, L, 2, inset);
     if (L <= 0) finish(0);
   }
   crumbs = stepCrumbs(crumbs, dt, H);
@@ -103,6 +109,7 @@ function showResult(r) {
   el.rNote.hidden = !r.isPB && !notes.length;
   el.rChal.hidden = !r.chal;
   if (r.chal) { el.rChal.textContent = r.chal.text; el.rChal.dataset.win = r.chal.win ? '1' : '0'; }
+  el.goal.hidden = true;
   el.status.hidden = true;
   el.result.hidden = false;
 }
@@ -134,11 +141,12 @@ el.again.addEventListener('click', () => { if (state === 'done') start(); });
 
 // ---------- drawing ----------
 function draw() {
-  drawStage(ctx, W, H, T, { L, bite: round.bite, crumbs });
+  drawStage(ctx, W, H, T, { L, bite: round.bite, crumbs, inset });
 }
 function resize() {
   const r = el.stage.getBoundingClientRect();
   W = Math.max(1, r.width); H = Math.max(1, r.height);
+  inset = parseFloat(getComputedStyle(insetProbe).paddingBottom) || 0;
   const dpr = Math.min(3, window.devicePixelRatio || 1);
   el.cv.width = Math.round(W * dpr); el.cv.height = Math.round(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

@@ -19,11 +19,13 @@ export const CARD_T = {
   mono: '"JetBrains Mono", ui-monospace, Menlo, monospace',
 };
 
-/** Stick fills the stage below the readout; the biscuit end runs off the bottom edge. */
-export function stageGeom(W, H) {
-  const topPad = clamp(H * 0.24, 160, 220);
-  const ppc = (H - topPad) / (L0 + HANDLE);
-  const zeroY = H - HANDLE * ppc;
+/** Stick stands in the middle, fully visible; the readout block sits below it. */
+export const HUD_SPACE = 196; // px kept free at the bottom for the readout and buttons
+export function stageGeom(W, H, inset = 0) {
+  const topPad = 40;
+  const bottom = HUD_SPACE + inset;
+  const ppc = (H - topPad - bottom) / (L0 + HANDLE);
+  const zeroY = H - bottom - HANDLE * ppc;
   const stickW = clamp(W * 0.075, 22, 38);
   return { ppc, zeroY, stickX: Math.round(W / 2), stickW };
 }
@@ -104,13 +106,13 @@ function drawStick(ctx, T, { x, w, zeroY, ppc, len, bite, depth, handleEnd }) {
 /** view: { L, bite, crumbs } */
 export function drawStage(ctx, W, H, T, view) {
   if (!W || !H) return;
-  const g = stageGeom(W, H);
+  const g = stageGeom(W, H, view.inset || 0);
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = T.stage;
   ctx.fillRect(0, 0, W, H);
   drawStick(ctx, T, {
     x: g.stickX, w: g.stickW, zeroY: g.zeroY, ppc: g.ppc, len: view.L, bite: view.bite,
-    depth: g.stickW * 0.32, handleEnd: H + 12,
+    depth: g.stickW * 0.32,
   });
   for (const c of view.crumbs || []) {
     ctx.globalAlpha = clamp(c.life / 0.4, 0, 1);
@@ -120,8 +122,8 @@ export function drawStage(ctx, W, H, T, view) {
   ctx.globalAlpha = 1;
 }
 
-export function spawnCrumbs(crumbs, W, H, L, n) {
-  const g = stageGeom(W, H);
+export function spawnCrumbs(crumbs, W, H, L, n, inset = 0) {
+  const g = stageGeom(W, H, inset);
   const y = g.zeroY - L * g.ppc;
   for (let i = 0; i < n && crumbs.length < 90; i++) {
     crumbs.push({
