@@ -1,0 +1,76 @@
+rules_version = '2';
+
+// 0.111cm 챌린지 — Firestore 보안 규칙
+// Firebase 콘솔 → Firestore Database → 규칙 탭에 전체를 붙여넣고 [게시]하세요.
+//
+// - 순위·닉네임은 누구나 읽을 수 있어요.
+// - 기록은 익명 로그인한 본인 문서(uid)에만 쓸 수 있어요.
+// - 최고 오차는 나빠질 수 없고, 플레이 수는 줄어들 수 없어요.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // 닉네임 점유: 문서 id = 소문자 닉네임
+    match /nicknames/{key} {
+      allow read: if true;
+      allow create: if signedIn()
+        && key.size() >= 2 && key.size() <= 12
+        && request.resource.data.keys().hasOnly(['uid', 'nickname'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.lower() == key;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /players/{uid} {
+      allow read: if true;
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['nickname', 'nickKey', 'createdAt', 'updatedAt'])
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() >= 2
+        && request.resource.data.nickname.size() <= 12
+        && request.resource.data.nickKey == request.resource.data.nickname.lower()
+        && request.resource.data.createdAt is int
+        && request.resource.data.updatedAt is int
+        && getAfter(/databases/$(database)/documents/nicknames/$(request.resource.data.nickKey)).data.uid == request.auth.uid;
+    }
+
+    function validScore(d) {
+      return d.keys().hasOnly(['best', 'bestLen', 'bestAt', 'tries', 'lastLen', 'lastAt'])
+        && d.best is number && d.best >= 0 && d.best <= 15
+        && d.bestLen is number && d.bestLen >= 0 && d.bestLen <= 15
+        && d.lastLen is number && d.lastLen >= 0 && d.lastLen <= 15
+        && d.bestAt is int && d.lastAt is int
+        && d.tries is int && d.tries >= 1 && d.tries <= 100000;
+    }
+
+    function canCreateScore(uid) {
+      return signedIn() && request.auth.uid == uid
+        && exists(/databases/$(database)/documents/players/$(uid))
+        && validScore(request.resource.data);
+    }
+
+    function canUpdateScore(uid) {
+      return signedIn() && request.auth.uid == uid
+        && validScore(request.resource.data)
+        && request.resource.data.tries > resource.data.tries
+        && request.resource.data.best <= resource.data.best;
+    }
+
+    match /scores_normal/{uid} {
+      allow read: if true;
+      allow create: if canCreateScore(uid);
+      allow update: if canUpdateScore(uid);
+    }
+
+    match /scores_blind/{uid} {
+      allow read: if true;
+      allow create: if canCreateScore(uid);
+      allow update: if canUpdateScore(uid);
+    }
+  }
+}
