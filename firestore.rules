@@ -54,23 +54,19 @@ service cloud.firestore {
         && validScore(request.resource.data);
     }
 
+    // 최고 기록(오차)은 나빠질 수 없어요. 단, 이전 최고가 '완식'(bestLen 0)이면 실제 기록으로 바꿀 수 있어요.
     function canUpdateScore(uid) {
       return signedIn() && request.auth.uid == uid
         && validScore(request.resource.data)
         && request.resource.data.tries > resource.data.tries
-        && request.resource.data.best <= resource.data.best;
+        && (request.resource.data.best <= resource.data.best || resource.data.bestLen == 0);
     }
 
-    match /scores_normal/{uid} {
-      allow read: if true;
-      allow create: if canCreateScore(uid);
-      allow update: if canUpdateScore(uid);
-    }
-
-    match /scores_blind/{uid} {
-      allow read: if true;
-      allow create: if canCreateScore(uid);
-      allow update: if canUpdateScore(uid);
+    // 스틱별 순위: 기본, 아몬드, 쿠키
+    match /{col}/{uid} {
+      allow read: if col in ['scores_normal', 'scores_almond', 'scores_cookie'];
+      allow create: if col in ['scores_normal', 'scores_almond', 'scores_cookie'] && canCreateScore(uid);
+      allow update: if col in ['scores_normal', 'scores_almond', 'scores_cookie'] && canUpdateScore(uid);
     }
   }
 }

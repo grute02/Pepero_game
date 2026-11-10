@@ -1,5 +1,5 @@
 // Result card sharing and challenge links (#c=...).
-import { round3 } from './sim.js';
+import { round3, STICKS } from './sim.js';
 
 function b64urlEncode(str) {
   const bytes = new TextEncoder().encode(str);
@@ -14,7 +14,7 @@ function b64urlDecode(s) {
   return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
 }
 
-/** { n: nickname, l: length cm, m: 'normal' | 'blind' } */
+/** { n: nickname, l: length cm, m: stick id } */
 export function challengeUrl(c) {
   const u = new URL(location.href);
   u.search = '';
@@ -29,7 +29,7 @@ export function readChallenge(hash = location.hash) {
     const o = JSON.parse(b64urlDecode(m[1]));
     if (typeof o.n !== 'string' || !o.n.trim() || o.n.length > 12) return null;
     if (typeof o.l !== 'number' || !(o.l >= 0 && o.l <= 15)) return null;
-    return { n: o.n.trim(), l: round3(o.l), m: 'normal' };
+    return { n: o.n.trim(), l: round3(o.l), m: STICKS[o.m] ? o.m : 'normal' };
   } catch {
     return null;
   }

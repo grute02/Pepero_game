@@ -1,4 +1,4 @@
-import { L0, VARIANTS, makeRound, advance, lengthAt, round3, errOf, diffText } from './sim.js';
+import { L0, VARIANTS, STICKS, makeRound, advance, lengthAt, round3, errOf, diffText, hasBest } from './sim.js';
 import { readTokens, drawStage, spawnCrumbs, stepCrumbs, drawCard } from './render.js';
 import { createStore, NICK_RE } from './store.js';
 import { challengeUrl, readChallenge, canvasToFile, shareFile, shareLink } from './share.js';
@@ -12,21 +12,24 @@ const el = {
   whoBtn: $('whoBtn'), whoName: $('whoName'), whoEdit: $('whoEdit'),
   ranks: $('ranks'), recent: $('recent'), note: $('note'),
   dlg: $('nickDlg'), form: $('nickForm'), nickInput: $('nickInput'), nickErr: $('nickErr'), nickSave: $('nickSave'), nickLater: $('nickLater'),
-  toast: $('toast'), card: $('cardCanvas'),
+  toast: $('toast'), card: $('cardCanvas'), sticks: $('sticks'),
 };
 const ctx = el.cv.getContext('2d');
 const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
-const MODE = 'normal';
+const STICK_KEY = 'stick0111.stick';
+const readStick = () => { try { const v = localStorage.getItem(STICK_KEY); return STICKS[v] ? v : 'normal'; } catch { return 'normal'; } };
 
 // ---------- state ----------
 let state = 'ready'; // ready | running | done
-let round = makeRound();
+let challenge = readChallenge();
+let stick = challenge ? challenge.m : readStick();
+let boardMode = stick;
+let round = makeRound(Math.random, stick);
 let L = L0;
 let t0 = 0, raf = 0, lastT = 0, doneAt = 0, seenEvents = 0;
 let crumbs = [];
 let last = null;
 let cardFile = null;
-let challenge = readChallenge();
 let T = readTokens();
 let W = 0, H = 0, inset = 0;
 
@@ -40,7 +43,7 @@ const store = createStore(() => { renderWho(); renderBoard(); renderNote(); });
 // ---------- game ----------
 function start() {
   cancelAnimationFrame(raf);
-  round = makeRound();
+  round = makeRound(Math.random, stick);
   seenEvents = 0;
   L = L0;
   state = 'running';
@@ -52,6 +55,7 @@ function start() {
   el.goal.hidden = false;
   el.status.hidden = false;
   el.status.textContent = '탭하면 멈춰요';
+  el.sticks.hidden = true;
   if (round.p.variant === 'wobble') showFlash(VARIANTS.wobble.flash);
   raf = requestAnimationFrame(loop);
 }
@@ -83,8 +87,8 @@ function finish(raw) {
   state = 'done';
   doneAt = performance.now();
   el.len.textContent = len.toFixed(3);
-  const isPB = store.record(MODE, len, err);
-  last = { len, err, variant: round.p.variant, bite: round.bite, isPB, chal: challengeResult(err) };
+  const isPB = store.record(stick, len, err);
+  last = { len, err, stick, variant: round.p.variant, bite: round.bite, isPB, chal: challengeResult(err) };
   showResult(last);
   draw();
   if (store.st.kind === 'firebase' && !store.st.nickname) toast('닉네임을 정하면 이 기록부터 순위에 올라가요');
@@ -92,7 +96,7 @@ function finish(raw) {
 }
 
 function challengeResult(err) {
-  if (!challenge) return null;
+  if (!challenge || challenge.m !== stick) return null;
   const theirs = errOf(challenge.l);
   if (err < theirs) return { win: true, text: `도전 성공! ${challenge.n}님보다 ${(theirs - err).toFixed(3)}cm 더 가까워요.` };
   if (err === theirs) return { win: false, text: `무승부예요. ${challenge.n}님과 오차가 똑같아요.` };
@@ -100,9 +104,10 @@ function challengeResult(err) {
 }
 
 function showResult(r) {
-  el.rDiff.textContent = r.len <= 0 ? '끝까지 다 먹어버렸어요' : diffText(r.len, r.err);
+  el.rDiff.textContent = diffText(r.len, r.err);
   const notes = [];
-  if (r.variant !== 'normal') notes.push(`이번 판은 ${VARIANTS[r.variant].name}이었어요.`);
+  if (r.variant !== 'normal') notes.push(`이번 판은 ${VARIANTS[r.variant].name} 스틱이었어요.`);
+  if (r.len <= 0) notes.push('최고 기록에는 안 들어가요.');
   el.rNote.replaceChildren();
   if (r.isPB) { const b = document.createElement('span'); b.className = 'pb'; b.textContent = '개인 최고 기록! '; el.rNote.append(b); }
   if (notes.length) el.rNote.append(document.createTextNode(notes.join(' ')));
@@ -112,7 +117,41 @@ function showResult(r) {
   el.goal.hidden = true;
   el.status.hidden = true;
   el.result.hidden = false;
+  el.sticks.hidden = false;
 }
+
+function resetReady() {
+  cancelAnimationFrame(raf);
+  state = 'ready';
+  round = makeRound(Math.random, stick);
+  L = L0;
+  crumbs = [];
+  last = null;
+  el.len.textContent = L0.toFixed(3);
+  el.result.hidden = true;
+  el.goal.hidden = false;
+  el.status.hidden = false;
+  el.status.textContent = '탭하면 시작해요';
+  el.sticks.hidden = false;
+  draw();
+}
+
+function setStick(id) {
+  if (!STICKS[id] || state === 'running') return;
+  stick = id;
+  try { localStorage.setItem(STICK_KEY, id); } catch {}
+  for (const b of el.sticks.querySelectorAll('button')) b.setAttribute('aria-checked', String(b.dataset.stick === id));
+  setBoard(id);
+  resetReady();
+}
+for (const b of document.querySelectorAll('#sticks button')) b.addEventListener('click', () => setStick(b.dataset.stick));
+
+function setBoard(id) {
+  boardMode = id;
+  for (const b of document.querySelectorAll('.tabs button')) b.setAttribute('aria-selected', String(b.dataset.board === id));
+  renderBoard();
+}
+for (const b of document.querySelectorAll('.tabs button')) b.addEventListener('click', () => setBoard(b.dataset.board));
 
 function handleAct(ts) {
   if (el.dlg.open) return;
@@ -141,7 +180,7 @@ el.again.addEventListener('click', () => { if (state === 'done') start(); });
 
 // ---------- drawing ----------
 function draw() {
-  drawStage(ctx, W, H, T, { L, bite: round.bite, crumbs, inset });
+  drawStage(ctx, W, H, T, { L, bite: round.bite, crumbs, inset, stick: round.p.stick });
 }
 function resize() {
   const r = el.stage.getBoundingClientRect();
@@ -192,11 +231,14 @@ async function prepareCard() {
   await fontsReady;
   if (r !== last) return;
   const d = new Date();
+  const sk = STICKS[r.stick];
   drawCard(el.card, {
     nickname: store.st.nickname || '익명',
+    stick: r.stick,
+    stickLabel: sk.level ? `${sk.full}(난이도 ${sk.level})` : sk.full,
     len: r.len,
-    diff: r.len <= 0 ? '끝까지 다 먹어버렸어요' : diffText(r.len, r.err),
-    variantName: r.variant !== 'normal' ? `이번 판: ${VARIANTS[r.variant].name}` : '',
+    diff: diffText(r.len, r.err),
+    variantName: r.variant !== 'normal' ? `이번 판: ${VARIANTS[r.variant].name} 스틱` : '',
     challengeLine: r.chal ? r.chal.text : '',
     url: siteLabel(),
     dateText: `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`,
@@ -217,8 +259,8 @@ el.shareCard.addEventListener('click', async () => {
 el.shareLink.addEventListener('click', async () => {
   if (!last) return;
   const nick = store.st.nickname || '익명';
-  const url = challengeUrl({ n: nick.slice(0, 12), l: last.len, m: MODE });
-  const text = `${nick}의 0.111cm 챌린지 기록 ${last.len.toFixed(3)}cm. 이길 수 있어요?`;
+  const url = challengeUrl({ n: nick.slice(0, 12), l: last.len, m: last.stick });
+  const text = `${nick}의 0.111cm 챌린지 ${STICKS[last.stick].full} 기록 ${last.len.toFixed(3)}cm. 이길 수 있어요?`;
   const res = await shareLink(url, text);
   if (res === 'copied') toast('도전장 링크를 복사했어요');
 });
@@ -227,7 +269,7 @@ function renderChallenge() {
   const box = $('challenge');
   if (!challenge) { box.hidden = true; return; }
   $('chName').textContent = challenge.n;
-  $('chLen').textContent = challenge.l.toFixed(3) + 'cm';
+  $('chLen').textContent = `${challenge.l.toFixed(3)}cm(${STICKS[challenge.m].name})`;
   box.hidden = false;
 }
 $('chClose').addEventListener('click', () => {
@@ -237,7 +279,7 @@ $('chClose').addEventListener('click', () => {
 });
 window.addEventListener('hashchange', () => {
   const c = readChallenge();
-  if (c) { challenge = c; renderChallenge(); }
+  if (c) { challenge = c; renderChallenge(); if (state !== 'running') setStick(c.m); }
 });
 
 // ---------- nickname ----------
@@ -291,23 +333,24 @@ function rel(ts) {
 
 function renderBoard() {
   const st = store.st;
-  const mine = st.mine[MODE];
-  $('mBest').textContent = mine && typeof mine.bestLen === 'number' ? mine.bestLen.toFixed(3) + 'cm' : '—';
-  $('mErr').textContent = mine && typeof mine.best === 'number' ? '±' + mine.best.toFixed(3) : '—';
+  const mine = st.mine[boardMode];
+  $('mBest').textContent = hasBest(mine) ? mine.bestLen.toFixed(3) + 'cm' : '—';
+  $('mErr').textContent = hasBest(mine) ? '±' + mine.best.toFixed(3) : '—';
   $('mTries').textContent = ((mine && mine.tries) || 0) + '판';
 
   const nameOf = (id) => st.names.get(id) || (id === st.uid ? st.nickname || '나' : '이름 없음');
-  const rows = (st.boards[MODE] || [])
-    .filter((d) => typeof d.best === 'number' && typeof d.bestLen === 'number')
+  const all = st.boards[boardMode] || [];
+  const rows = all
+    .filter(hasBest)
     .sort((a, b) => a.best - b.best || (a.bestAt || 0) - (b.bestAt || 0));
 
   el.ranks.replaceChildren();
-  if (!st.loaded[MODE] && st.kind !== 'local') {
+  if (!st.loaded[boardMode] && st.kind !== 'local') {
     const li = document.createElement('li'); li.className = 'empty'; li.textContent = '순위를 불러오는 중이에요…';
     el.ranks.append(li);
   } else if (!rows.length) {
     const li = document.createElement('li'); li.className = 'empty';
-    li.textContent = '아직 기록이 없어요. 첫 판을 하면 여기에 올라가요.';
+    li.textContent = `${STICKS[boardMode].full} 기록이 아직 없어요. 첫 판을 하면 여기에 올라가요.`;
     el.ranks.append(li);
   }
   rows.forEach((r, i) => {
@@ -328,7 +371,7 @@ function renderBoard() {
   $('boardSub').textContent = rows.length ? `${rows.length}명 참여 · 1인 최고 기록 · 0.111cm에 가까운 순` : '1인 최고 기록 · 0.111cm에 가까운 순';
 
   el.recent.replaceChildren();
-  const recent = rows.filter((r) => r.lastAt).sort((a, b) => b.lastAt - a.lastAt).slice(0, 5);
+  const recent = all.filter((r) => r.lastAt).sort((a, b) => b.lastAt - a.lastAt).slice(0, 5);
   if (!recent.length) {
     const li = document.createElement('li');
     const s = document.createElement('span'); s.className = 'rn'; s.textContent = '아직 기록이 없어요';
@@ -355,6 +398,8 @@ setInterval(renderBoard, 30000);
 // ---------- boot ----------
 renderChallenge();
 el.len.textContent = L0.toFixed(3);
+for (const b of el.sticks.querySelectorAll('button')) b.setAttribute('aria-checked', String(b.dataset.stick === stick));
+setBoard(stick);
 renderWho();
 renderBoard();
 draw();

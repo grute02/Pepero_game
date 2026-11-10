@@ -3,7 +3,7 @@ import { TARGET, L0, HANDLE, BITE_CM } from './sim.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-const TOKENS = ['stage', 'ink', 'muted', 'rule', 'hair', 'choco', 'choco-hi', 'biscuit', 'biscuit-lo', 'mark', 'panel'];
+const TOKENS = ['stage', 'ink', 'muted', 'rule', 'hair', 'choco', 'choco-hi', 'biscuit', 'biscuit-lo', 'mark', 'panel', 'almond', 'almond-lo', 'cookie', 'cookie-hi', 'crumb'];
 export function readTokens() {
   const cs = getComputedStyle(document.documentElement);
   const T = {};
@@ -16,11 +16,12 @@ export function readTokens() {
 export const CARD_T = {
   stage: '#FFFFFF', bg: '#ECEFF2', ink: '#1B2127', muted: '#63707C', rule: '#C3CBD3', hair: '#DEE3E8',
   choco: '#4A2C1E', 'choco-hi': '#7E5038', biscuit: '#DCAB5E', 'biscuit-lo': '#B5843C', mark: '#D2392B', panel: '#F7F9FA',
+  almond: '#E2C29A', 'almond-lo': '#B98F5F', cookie: '#E6DDCD', 'cookie-hi': '#F7F2E9', crumb: '#3A2A21',
   mono: '"JetBrains Mono", ui-monospace, Menlo, monospace',
 };
 
 /** Stick stands in the middle, fully visible; the readout block sits below it. */
-export const HUD_SPACE = 196; // px kept free at the bottom for the readout and buttons
+export const HUD_SPACE = 236; // px kept free at the bottom for the readout and buttons
 export function stageGeom(W, H, inset = 0) {
   const topPad = 40;
   const bottom = HUD_SPACE + inset;
@@ -68,7 +69,28 @@ function cylGrad(ctx, x, w, c0, c1) {
   return gr;
 }
 
-function drawStick(ctx, T, { x, w, zeroY, ppc, len, bite, depth, handleEnd }) {
+function mulberry32(a) {
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// Fixed toppings along the stick (cm from the coating's bottom edge), the same every round.
+const TOPPINGS = {};
+function toppings(type) {
+  if (TOPPINGS[type]) return TOPPINGS[type];
+  const r = mulberry32(type === 'almond' ? 11 : 23);
+  const n = type === 'almond' ? 95 : 150;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    out.push({ y: r() * (L0 + 0.3), x: r() * 2 - 1, s: type === 'almond' ? 0.16 + r() * 0.2 : 0.05 + r() * 0.11, a: r() * Math.PI, k: r() });
+  }
+  return (TOPPINGS[type] = out);
+}
+
+function drawStick(ctx, T, { x, w, zeroY, ppc, len, bite, depth, handleEnd, type = 'normal' }) {
   const hb = handleEnd ?? zeroY + HANDLE * ppc;
   ctx.fillStyle = cylGrad(ctx, x, w, T['biscuit-lo'], T.biscuit);
   const rr = Math.min(w * 0.35, 6);
@@ -90,10 +112,28 @@ function drawStick(ctx, T, { x, w, zeroY, ppc, len, bite, depth, handleEnd }) {
   for (const [px, py] of pts) p.lineTo(px, py);
   p.lineTo(x + w / 2, zeroY);
   p.closePath();
-  ctx.fillStyle = cylGrad(ctx, x, w, T.choco, T['choco-hi']);
+  ctx.fillStyle = type === 'cookie' ? cylGrad(ctx, x, w, T.cookie, T['cookie-hi']) : cylGrad(ctx, x, w, T.choco, T['choco-hi']);
   ctx.fill(p);
   ctx.save();
   ctx.clip(p);
+  if (type === 'almond' || type === 'cookie') {
+    for (const tp of toppings(type)) {
+      if (tp.y > len + 0.3) continue;
+      const px = x + tp.x * (w / 2) * 0.95, py = zeroY - tp.y * ppc, sz = tp.s * w;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(tp.a);
+      if (type === 'almond') {
+        ctx.fillStyle = tp.k < 0.35 ? T['almond-lo'] : T.almond;
+        ctx.beginPath(); ctx.ellipse(0, 0, sz * 0.62, sz * 0.36, 0, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.fillStyle = T.crumb;
+        ctx.globalAlpha = 0.65 + tp.k * 0.35;
+        ctx.beginPath(); ctx.moveTo(-sz / 2, -sz * 0.3); ctx.lineTo(sz * 0.4, -sz / 2); ctx.lineTo(sz / 2, sz * 0.35); ctx.lineTo(-sz * 0.2, sz / 2); ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
   ctx.strokeStyle = T.biscuit;
   ctx.lineWidth = clamp(depth * 0.5, 2, 9);
   ctx.lineJoin = 'round';
@@ -112,11 +152,13 @@ export function drawStage(ctx, W, H, T, view) {
   ctx.fillRect(0, 0, W, H);
   drawStick(ctx, T, {
     x: g.stickX, w: g.stickW, zeroY: g.zeroY, ppc: g.ppc, len: view.L, bite: view.bite,
-    depth: g.stickW * 0.32,
+    depth: g.stickW * 0.32, type: view.stick,
   });
+  const crumbA = view.stick === 'cookie' ? T.cookie : T.choco;
+  const crumbB = view.stick === 'cookie' ? T.crumb : view.stick === 'almond' ? T.almond : T.biscuit;
   for (const c of view.crumbs || []) {
     ctx.globalAlpha = clamp(c.life / 0.4, 0, 1);
-    ctx.fillStyle = c.biscuit ? T.biscuit : T.choco;
+    ctx.fillStyle = c.biscuit ? crumbB : crumbA;
     ctx.fillRect(c.x - c.s / 2, c.y - c.s / 2, c.s, c.s);
   }
   ctx.globalAlpha = 1;
@@ -141,7 +183,7 @@ export function stepCrumbs(crumbs, dt, H) {
 // ---------- result card ----------
 const W_TOP = 0.45, W_BOT = -0.15; // magnified window on the card, cm
 
-function drawLoupe(ctx, T, { cx, cy, r, L, bite, sc }) {
+function drawLoupe(ctx, T, { cx, cy, r, L, bite, sc, type }) {
   const ppcL = (2 * r) / (W_TOP - W_BOT);
   const zeroL = cy + ((W_TOP + W_BOT) / 2) * ppcL;
   ctx.save();
@@ -149,7 +191,7 @@ function drawLoupe(ctx, T, { cx, cy, r, L, bite, sc }) {
   ctx.fillStyle = T.panel; ctx.fill();
   ctx.clip();
   drawRuler(ctx, T, { x: cx - r * 0.42, zeroY: zeroL, ppc: ppcL, from: 0, to: W_TOP + 0.1, sc });
-  drawStick(ctx, T, { x: cx + r * 0.2, w: r * 0.6, zeroY: zeroL, ppc: ppcL, len: L, bite, depth: BITE_CM * ppcL });
+  drawStick(ctx, T, { x: cx + r * 0.2, w: r * 0.6, zeroY: zeroL, ppc: ppcL, len: L, bite, depth: BITE_CM * ppcL, type });
   const tyL = Math.round(zeroL - TARGET * ppcL) + 0.5;
   ctx.strokeStyle = T.mark; ctx.lineWidth = sc; ctx.setLineDash([3 * sc, 3 * sc]);
   ctx.beginPath(); ctx.moveTo(cx - r * 0.42 - 12 * sc, tyL); ctx.lineTo(cx + r, tyL); ctx.stroke();
@@ -184,7 +226,7 @@ function wrapText(ctx, text, x, y, maxW, lh) {
   return y + lh;
 }
 
-/** data: { nickname, len, diff, variantName, challengeLine, url, dateText, bite } */
+/** data: { nickname, stickLabel, stick, len, diff, variantName, challengeLine, url, dateText, bite } */
 export function drawCard(canvas, data) {
   const T = CARD_T;
   const Wc = 1080, Hc = 1350, M = 80;
@@ -201,7 +243,7 @@ export function drawCard(canvas, data) {
 
   ctx.fillStyle = T.muted;
   ctx.font = `500 28px ${T.mono}`;
-  ctx.fillText('11.11', M + 20, 150);
+  ctx.fillText(`11.11 · ${data.stickLabel}`, M + 20, 150);
   ctx.fillStyle = T.ink;
   ctx.font = `64px ${display}`;
   ctx.fillText('0.111cm 챌린지', M + 20, 230);
@@ -223,7 +265,7 @@ export function drawCard(canvas, data) {
   ctx.fillText(data.diff, M + 20, 650);
 
   const r = 200, lcx = Wc - M - r - 10, lcy = 990;
-  drawLoupe(ctx, T, { cx: lcx, cy: lcy, r, L: data.len, bite: data.bite, sc: 2.6 });
+  drawLoupe(ctx, T, { cx: lcx, cy: lcy, r, L: data.len, bite: data.bite, sc: 2.6, type: data.stick });
 
   const textW = lcx - r - M - 50;
   let ty = 860;

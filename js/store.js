@@ -1,11 +1,11 @@
 // Records and leaderboards: Firebase (anonymous auth + Firestore) or this browser only.
 import { FIREBASE_CONFIG } from './config.js';
-import { nextRecord } from './sim.js';
+import { nextRecord, hasBest, STICK_IDS } from './sim.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/12.19.0';
 const LS_KEY = 'stick0111.v2';
-const COL = { normal: 'scores_normal', blind: 'scores_blind' };
-export const MODES = ['normal'];
+const COL = { normal: 'scores_normal', almond: 'scores_almond', cookie: 'scores_cookie' };
+export const MODES = STICK_IDS;
 export const NICK_RE = /^[0-9A-Za-z가-힣_-]{2,12}$/;
 
 export function createStore(onChange) {
@@ -14,13 +14,13 @@ export function createStore(onChange) {
     note: '', noteTone: '',
     ready: false,
     uid: null, nickname: '',
-    mine: { normal: null },
-    boards: { normal: [] },
-    loaded: { normal: false },
+    mine: Object.fromEntries(MODES.map((m) => [m, null])),
+    boards: Object.fromEntries(MODES.map((m) => [m, []])),
+    loaded: Object.fromEntries(MODES.map((m) => [m, false])),
     names: new Map(),
   };
   let fb = null;
-  const queues = { normal: { busy: false, body: null } };
+  const queues = Object.fromEntries(MODES.map((m) => [m, { busy: false, body: null }]));
   const emit = () => onChange(st);
   const setNote = (text, tone = '') => { st.note = text; st.noteTone = tone; emit(); };
 
@@ -191,12 +191,13 @@ export function createStore(onChange) {
   }
 
   function mergeRec(server, local) {
-    const better = local.best < server.best;
+    const sH = hasBest(server), lH = hasBest(local);
+    const src = lH && (!sH || local.best < server.best) ? local : sH ? server : local;
     const sTries = server.tries || 0;
     return {
-      best: better ? local.best : server.best,
-      bestLen: better ? local.bestLen : server.bestLen,
-      bestAt: better ? local.bestAt : server.bestAt,
+      best: src.best,
+      bestLen: src.bestLen,
+      bestAt: src.bestAt,
       tries: local.tries > sTries ? local.tries : sTries + 1,
       lastLen: local.lastLen,
       lastAt: local.lastAt,

@@ -22,7 +22,7 @@
     <div class="stage" id="stage" role="button" tabindex="0" aria-label="탭해서 시작하거나 멈추기">
       <canvas id="cv"></canvas>
       <div class="hud" id="hud">
-        <div class="len" id="lenWrap"><span id="len">15.000</span><span class="unit">cm</span></div>
+        <div class="len" id="lenWrap"><span id="len">5.000</span><span class="unit">cm</span></div>
         <p class="goal" id="goal">0.111cm에서 멈추세요</p>
         <p class="status" id="status">탭하면 시작해요</p>
         <div class="challenge" id="challenge" hidden>
@@ -39,6 +39,11 @@
             <button type="button" class="ghost" id="shareLink">도전장</button>
           </div>
         </div>
+        <div class="sticks" id="sticks" role="radiogroup" aria-label="스틱 고르기">
+          <button type="button" role="radio" aria-checked="true" data-stick="normal">기본</button>
+          <button type="button" role="radio" aria-checked="false" data-stick="almond">아몬드<span class="lv">중</span></button>
+          <button type="button" role="radio" aria-checked="false" data-stick="cookie">쿠키<span class="lv">상</span></button>
+        </div>
       </div>
       <div class="flash" id="flash" hidden></div>
     </div>
@@ -50,6 +55,11 @@
       <button class="who" id="whoBtn" type="button" aria-label="닉네임 정하기">
         <span class="who-name" id="whoName">닉네임 정하기</span><span class="who-edit" id="whoEdit" hidden>변경</span>
       </button>
+    </div>
+    <div class="tabs" role="tablist" aria-label="스틱별 순위">
+      <button type="button" role="tab" aria-selected="true" data-board="normal">기본</button>
+      <button type="button" role="tab" aria-selected="false" data-board="almond">아몬드</button>
+      <button type="button" role="tab" aria-selected="false" data-board="cookie">쿠키</button>
     </div>
     <p class="sub" id="boardSub">1인 최고 기록 · 0.111cm에 가까운 순</p>
     <div class="mine">
@@ -63,7 +73,9 @@
     <h3>최근 플레이</h3>
     <ul class="recent" id="recent"></ul>
 
-    <p class="rule"><b>변칙 스틱</b> 열 판 중 네 판은 급가속, 멈칫, 출렁 중 하나가 섞여 나와요.</p>
+    <p class="rule"><b>스틱</b> 기본은 영상과 같은 속도, 아몬드는 1.2배, 쿠키는 1.45배에 속도가 들쭉날쭉해요. 순위는 스틱별로 따로 매겨요.</p>
+    <p class="rule"><b>변칙</b> 열 판 중 네 판은 급가속, 멈칫, 출렁 중 하나가 섞여 나와요.</p>
+    <p class="rule"><b>완식</b> 끝까지 다 먹으면(0.000cm) 플레이 수에만 들어가고 최고 기록에는 안 들어가요.</p>
   </aside>
 </div>
 
