@@ -26,6 +26,14 @@
 저장소 Settings → Pages → Source: `Deploy from a branch`, Branch: `main` / `/ (root)` → Save.
 1~2분 뒤 `https://grute02.github.io/Pepero_game/`에서 열려요.
 
+## 수정 후 배포할 때
+
+GitHub Pages는 파일을 10분 동안 캐시해요. css/js를 고친 뒤에는 커밋 전에 버전을 새로 찍어야, 휴대폰에서 새 화면과 옛 스크립트가 섞이지 않아요.
+
+```bash
+python3 scripts/bump-version.py
+```
+
 ## 로컬 실행
 
 ES 모듈을 쓰기 때문에 파일을 더블클릭하면 안 열려요. 간단한 서버로 띄워요.

@@ -1,7 +1,7 @@
-import { L0, VARIANTS, STICKS, makeRound, advance, lengthAt, round3, errOf, diffText, hasBest } from './sim.js';
-import { readTokens, drawStage, spawnCrumbs, stepCrumbs, drawCard } from './render.js';
-import { createStore, NICK_RE } from './store.js';
-import { challengeUrl, readChallenge, canvasToFile, shareFile, shareLink } from './share.js';
+import { L0, VARIANTS, STICKS, makeRound, advance, lengthAt, round3, errOf, diffText, hasBest } from './sim.js?v=20261110202124';
+import { readTokens, drawStage, spawnCrumbs, stepCrumbs, drawCard } from './render.js?v=20261110202124';
+import { createStore, NICK_RE } from './store.js?v=20261110202124';
+import { challengeUrl, readChallenge, canvasToFile, shareFile, shareLink } from './share.js?v=20261110202124';
 
 const $ = (id) => document.getElementById(id);
 const el = {

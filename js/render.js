@@ -1,5 +1,5 @@
 // Canvas drawing: the game stage and the shareable result card.
-import { TARGET, L0, HANDLE, BITE_CM } from './sim.js';
+import { TARGET, L0, HANDLE, BITE_CM } from './sim.js?v=20261110202124';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 

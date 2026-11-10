@@ -1,6 +1,6 @@
 // Records and leaderboards: Firebase (anonymous auth + Firestore) or this browser only.
-import { FIREBASE_CONFIG } from './config.js';
-import { nextRecord, hasBest, STICK_IDS } from './sim.js';
+import { FIREBASE_CONFIG } from './config.js?v=20261110202124';
+import { nextRecord, hasBest, STICK_IDS } from './sim.js?v=20261110202124';
 
 const SDK = 'https://www.gstatic.com/firebasejs/12.19.0';
 const LS_KEY = 'stick0111.v2';

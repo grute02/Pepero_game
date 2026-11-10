@@ -1,5 +1,5 @@
 // Result card sharing and challenge links (#c=...).
-import { round3, STICKS } from './sim.js';
+import { round3, STICKS } from './sim.js?v=20261110202124';
 
 function b64urlEncode(str) {
   const bytes = new TextEncoder().encode(str);
