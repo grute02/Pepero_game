@@ -2,7 +2,12 @@
 
 export const TARGET = 0.111;      // cm
 export const L0 = 15;             // starting length, cm
-export const DRAG = 0.45;         // floor speed, cm/s
+// Speed curve fitted to the reference clip: ~1.85 cm/s for most of the stick,
+// rising to ~4 cm/s over the last 4 cm. About 6.6 s from 15 cm to 0.
+export const V_SLOW = 1.85;       // cm/s while the stick is long
+export const V_RISE = 2.2;        // extra cm/s near the end
+export const RISE_AT = 4.4;       // cm, middle of the speed-up
+export const RISE_W = 0.8;        // cm, how gradual the speed-up is
 export const HANDLE = 2.4;        // uncoated biscuit end, cm (drawn below 0)
 export const BITE_CM = 0.08;      // depth of the bite marks, cm
 export const BLIND_BELOW = 1.0;   // blind mode hides the readout below this length, cm
@@ -25,11 +30,10 @@ export function makeRound(rand = Math.random) {
   }
   const p = {
     variant,
-    k: 1.25 + rand() * 0.3,
-    accelAt: 1.2 + rand() * 2.3,     // cm, speed jumps when the stick gets this short
-    accelX: 1.9,
-    freezeAt: 0.35 + rand() * 2.15,  // cm, stick pauses here
-    freezeDur: 0.35 + rand() * 0.4,  // s
+    accelAt: 1.5 + rand() * 4.5,     // cm, speed jumps when the stick gets this short
+    accelX: 1.6,
+    freezeAt: 0.6 + rand() * 4,      // cm, stick pauses here
+    freezeDur: 0.4 + rand() * 0.5,   // s
     wobF: 1.1 + rand() * 0.5,        // Hz
     wobPh: rand() * Math.PI * 2,
   };
@@ -43,13 +47,15 @@ export function makeRound(rand = Math.random) {
 const DT = 0.001; // fixed 1 ms grid, so the result never depends on frame timing
 const freshState = () => ({ n: 0, t: 0, L: L0, accelOn: false, freezeT: -1 });
 
-// dL/dt = -m(t)·(k·L + DRAG): fast at first, slower near the end, so stopping is skill, not luck.
+// Base speed: steady, then speeds up over the last few centimetres (logistic in length).
+export const baseSpeed = (L) => V_SLOW + V_RISE / (1 + Math.exp((L - RISE_AT) / RISE_W));
+
 function rate(p, s) {
   if (s.freezeT >= 0 && s.t < s.freezeT + p.freezeDur) return 0;
   let m = 1;
   if (p.variant === 'accel' && s.accelOn) m = p.accelX;
-  if (p.variant === 'wobble') m = Math.max(0.45, 1 + 0.55 * Math.sin(2 * Math.PI * p.wobF * s.t + p.wobPh));
-  return m * (p.k * s.L + DRAG);
+  if (p.variant === 'wobble') m = Math.max(0.5, 1 + 0.45 * Math.sin(2 * Math.PI * p.wobF * s.t + p.wobPh));
+  return m * baseSpeed(s.L);
 }
 
 // Steps s along the grid up to t and returns the length at exactly t (sub-step interpolated, s untouched by it).
@@ -108,9 +114,9 @@ export const GRADES = {
 export function tierOf(len, err) {
   if (len <= 0) return 'F';
   if (err === 0) return 'P';
-  if (err <= 0.005) return 'S';
-  if (err <= 0.02) return 'A';
-  if (err <= 0.06) return 'B';
+  if (err <= 0.01) return 'S';
+  if (err <= 0.03) return 'A';
+  if (err <= 0.08) return 'B';
   if (err <= 0.2) return 'C';
   return 'D';
 }
