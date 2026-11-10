@@ -8,8 +8,8 @@
 <meta property="og:title" content="0.111cm 챌린지">
 <meta property="og:description" content="0.111cm에 가장 가깝게 멈춘 사람이 이겨요.">
 <meta property="og:type" content="website">
-<meta name="theme-color" content="#ECEFF2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#13171B" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1D2329" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='13' y='3' width='6' height='19' rx='1' fill='%235A3726'/%3E%3Crect x='13' y='21' width='6' height='8' rx='2' fill='%23D8A85E'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,88 +18,53 @@
 </head>
 <body>
 <div class="app">
-  <header class="top">
-    <div>
-      <div class="eyebrow">11.11 · 팀 대항전</div>
-      <h1>0.111cm 챌린지</h1>
-    </div>
-    <button class="who" id="whoBtn" type="button" aria-label="닉네임 정하기">
-      <span class="who-name" id="whoName">닉네임 정하기</span><span class="who-edit" id="whoEdit" hidden>변경</span>
-    </button>
-  </header>
-
-  <div class="challenge" id="challenge" hidden>
-    <p><b id="chName"></b>님의 도전장이에요. <span class="mono" id="chLen"></span> (<span id="chMode"></span>)보다 0.111cm에 가깝게 멈추면 승리!</p>
-    <button type="button" class="link-btn" id="chClose">닫기</button>
-  </div>
-
-  <main class="layout">
-    <section class="game" aria-label="게임">
-      <div class="modes" role="radiogroup" aria-label="모드">
-        <button type="button" role="radio" aria-checked="true" data-mode="normal" id="modeNormal">일반</button>
-        <button type="button" role="radio" aria-checked="false" data-mode="blind" id="modeBlind">블라인드</button>
-      </div>
-
-      <div class="readout">
+  <section class="game" aria-label="게임">
+    <div class="stage" id="stage" role="button" tabindex="0" aria-label="탭해서 시작하거나 멈추기">
+      <canvas id="cv"></canvas>
+      <div class="hud" id="hud">
         <div class="len" id="lenWrap"><span id="len">15.000</span><span class="unit">cm</span></div>
-        <p class="status" id="status"></p>
+        <p class="goal">0.111cm에서 멈추세요</p>
+        <p class="status" id="status">탭하면 시작해요</p>
+        <div class="challenge" id="challenge" hidden>
+          <span><b id="chName"></b>님 기록 <b class="mono" id="chLen"></b>에 도전 중</span>
+          <button type="button" class="link-btn" id="chClose" aria-label="도전 닫기">닫기</button>
+        </div>
         <div class="result" id="result" hidden>
-          <div class="gradebox" id="rGrade" data-tier="S">S</div>
-          <div class="rline"><span class="rtitle" id="rTitle"></span><span class="rdiff" id="rDiff"></span><span class="pb" id="rPb" hidden>개인 최고</span></div>
-          <p class="rmsg" id="rMsg"></p>
+          <p class="rdiff" id="rDiff"></p>
+          <p class="rnote" id="rNote" hidden></p>
           <p class="rchal" id="rChal" hidden></p>
+          <div class="ractions">
+            <button type="button" class="primary" id="again">다시 하기</button>
+            <button type="button" class="ghost" id="shareCard">결과 카드</button>
+            <button type="button" class="ghost" id="shareLink">도전장</button>
+          </div>
         </div>
       </div>
+      <div class="flash" id="flash" hidden></div>
+    </div>
+  </section>
 
-      <div class="stage" id="stage" role="img" aria-label="줄어드는 초코 스틱과 자, 0.111cm 지점 확대경">
-        <canvas id="cv"></canvas>
-        <div class="flash" id="flash" hidden></div>
-      </div>
-      <button class="act" id="act" type="button">시작</button>
-      <div class="share" id="shareRow" hidden>
-        <button type="button" class="ghost" id="shareCard">결과 카드 공유</button>
-        <button type="button" class="ghost" id="shareLink">도전장 보내기</button>
-      </div>
-      <p class="hint">화면을 누르거나 스페이스바로도 시작하고 멈출 수 있어요</p>
-    </section>
+  <aside class="board" aria-label="순위">
+    <div class="bh">
+      <h2>팀 순위</h2>
+      <button class="who" id="whoBtn" type="button" aria-label="닉네임 정하기">
+        <span class="who-name" id="whoName">닉네임 정하기</span><span class="who-edit" id="whoEdit" hidden>변경</span>
+      </button>
+    </div>
+    <p class="sub" id="boardSub">1인 최고 기록 · 0.111cm에 가까운 순</p>
+    <div class="mine">
+      <div><span class="k">내 최고</span><span class="v" id="mBest">—</span></div>
+      <div><span class="k">오차</span><span class="v" id="mErr">—</span></div>
+      <div><span class="k">플레이</span><span class="v" id="mTries">0판</span></div>
+    </div>
+    <ol class="ranks" id="ranks"><li class="empty">순위를 불러오는 중이에요…</li></ol>
+    <p class="note" id="note" hidden></p>
 
-    <aside class="board" aria-label="순위">
-      <div class="bh">
-        <h2>팀 순위</h2>
-        <div class="tabs" role="tablist" aria-label="순위 모드">
-          <button type="button" role="tab" aria-selected="true" data-board="normal" id="tabNormal">일반</button>
-          <button type="button" role="tab" aria-selected="false" data-board="blind" id="tabBlind">블라인드</button>
-        </div>
-      </div>
-      <p class="sub" id="boardSub">1인 최고 기록 · 오차 작은 순</p>
-      <div class="mine">
-        <div><span class="k">내 최고</span><span class="v" id="mBest">—</span></div>
-        <div><span class="k">오차</span><span class="v" id="mErr">—</span></div>
-        <div><span class="k">플레이</span><span class="v" id="mTries">0판</span></div>
-      </div>
-      <ol class="ranks" id="ranks"><li class="empty">순위를 불러오는 중이에요…</li></ol>
-      <p class="note" id="note" hidden></p>
+    <h3>최근 플레이</h3>
+    <ul class="recent" id="recent"></ul>
 
-      <h3>최근 플레이</h3>
-      <ul class="recent" id="recent"></ul>
-
-      <h3>등급표</h3>
-      <div class="tiers">
-        <div><span class="chip" data-tier="P">P</span>±0.000</div>
-        <div><span class="chip" data-tier="S">S</span>≤0.010</div>
-        <div><span class="chip" data-tier="A">A</span>≤0.030</div>
-        <div><span class="chip" data-tier="B">B</span>≤0.080</div>
-        <div><span class="chip" data-tier="C">C</span>≤0.200</div>
-        <div><span class="chip" data-tier="D">D</span>그 이상</div>
-      </div>
-
-      <h3>규칙</h3>
-      <dl class="rules">
-        <dt>블라인드</dt><dd>1cm 아래부터 숫자와 확대경이 사라져요. 감으로만 멈추세요. 순위는 따로 매겨요.</dd>
-        <dt>변칙 스틱</dt><dd>열 판 중 네 판은 급가속, 멈칫, 출렁 중 하나가 섞여 나와요. 언제 나올지는 몰라요.</dd>
-      </dl>
-    </aside>
-  </main>
+    <p class="rule"><b>변칙 스틱</b> 열 판 중 네 판은 급가속, 멈칫, 출렁 중 하나가 섞여 나와요.</p>
+  </aside>
 </div>
 
 <dialog class="dlg" id="nickDlg" aria-labelledby="nickTitle">

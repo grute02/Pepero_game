@@ -10,8 +10,6 @@ export const RISE_AT = 4.4;       // cm, middle of the speed-up
 export const RISE_W = 0.8;        // cm, how gradual the speed-up is
 export const HANDLE = 2.4;        // uncoated biscuit end, cm (drawn below 0)
 export const BITE_CM = 0.08;      // depth of the bite marks, cm
-export const BLIND_BELOW = 1.0;   // blind mode hides the readout below this length, cm
-export const BLIND_FOG = 1.2;     // blind mode fogs the stage below this length, cm
 
 // Odd sticks: 40% of rounds get one surprise.
 export const VARIANTS = {
@@ -100,31 +98,6 @@ export function lengthAt(round, tSec) {
 
 export const round3 = (v) => Math.round(v * 1000) / 1000;
 export const errOf = (len) => Math.abs(Math.round(len * 1000) - Math.round(TARGET * 1000)) / 1000;
-
-export const GRADES = {
-  P: { label: 'P', name: '11.11 퍼펙트', msg: '정확히 0.111cm. 오늘의 전설이에요.' },
-  S: { label: 'S', name: '장인', msg: '손끝이 캘리퍼 수준이에요.' },
-  A: { label: 'A', name: '정밀', msg: '아주 가까워요. 한 판 더 하면 S도 보여요.' },
-  B: { label: 'B', name: '준수', msg: '나쁘지 않아요. 타이밍을 조금만 더 다듬어 보세요.' },
-  C: { label: 'C', name: '아쉬움', msg: '' },
-  D: { label: 'D', name: '성급함', msg: '너무 일찍 멈췄어요. 끝까지 기다려 보세요.' },
-  F: { label: '완식', name: '다 먹어버렸어요', msg: '0.000cm. 한 박자만 빨리 눌러 보세요.' },
-};
-
-export function tierOf(len, err) {
-  if (len <= 0) return 'F';
-  if (err === 0) return 'P';
-  if (err <= 0.01) return 'S';
-  if (err <= 0.03) return 'A';
-  if (err <= 0.08) return 'B';
-  if (err <= 0.2) return 'C';
-  return 'D';
-}
-
-export function gradeMessage(tier, len) {
-  if (tier !== 'C') return GRADES[tier].msg;
-  return len > TARGET ? '조금 일찍 눌렀어요. 반 박자만 더 기다려 보세요.' : '조금 늦었어요. 반 박자만 빨리 눌러 보세요.';
-}
 
 export function diffText(len, err) {
   if (err === 0) return '오차 0.000cm';

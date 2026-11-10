@@ -29,8 +29,7 @@ export function readChallenge(hash = location.hash) {
     const o = JSON.parse(b64urlDecode(m[1]));
     if (typeof o.n !== 'string' || !o.n.trim() || o.n.length > 12) return null;
     if (typeof o.l !== 'number' || !(o.l >= 0 && o.l <= 15)) return null;
-    if (o.m !== 'normal' && o.m !== 'blind') return null;
-    return { n: o.n.trim(), l: round3(o.l), m: o.m };
+    return { n: o.n.trim(), l: round3(o.l), m: 'normal' };
   } catch {
     return null;
   }

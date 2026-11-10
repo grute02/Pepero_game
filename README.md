@@ -4,10 +4,9 @@
 
 ## 기능
 
-- **기본 게임**: 15cm에서 시작해 초당 약 1.85cm로 줄다가, 마지막 4cm쯤부터 초당 약 4cm로 빨라져요. 한 판은 6~7초예요. 0.111cm와의 오차로 P·S·A·B·C·D 등급을 매겨요. 끝까지 다 먹으면 '완식'.
-- **블라인드 모드**: 1cm 아래부터 숫자, 확대경, 스틱 끝이 가려져요. 순위는 일반 모드와 따로 매겨요.
+- **기본 게임**: 화면 전체에 스틱 하나. 15cm에서 시작해 초당 약 1.85cm로 줄다가, 마지막 4cm쯤부터 초당 약 4cm로 빨라져요. 한 판은 6~7초. 화면을 탭하면 시작하고, 다시 탭하면 멈춰요.
 - **변칙 스틱**: 40% 확률로 급가속, 멈칫, 출렁 중 하나가 섞여 나와요.
-- **팀 순위**: 모드별 1인 최고 기록 실시간 순위, 최근 플레이.
+- **팀 순위**: 0.111cm와의 오차 기준 1인 최고 기록 실시간 순위, 최근 플레이.
 - **공유**: 결과 카드 이미지(공유 시트 또는 저장), 도전장 링크(`#c=...`)로 1:1 도전.
 - **닉네임 로그인**: Firebase 익명 인증으로 브라우저마다 고유 ID를 만들고, 닉네임은 먼저 쓴 사람이 점유해요.
 
@@ -41,8 +40,8 @@ python3 -m http.server 8000
 index.html          화면 구조
 css/style.css       스타일 (라이트/다크)
 js/config.js        Firebase 설정값
-js/sim.js           게임 규칙, 스틱 시뮬레이션, 등급 (DOM 없음)
-js/render.js        캔버스: 게임 화면, 결과 카드
+js/sim.js           게임 규칙, 스틱 시뮬레이션 (DOM 없음)
+js/render.js        캔버스: 스틱 화면, 결과 카드
 js/store.js         Firebase 연동, 로컬 기록
 js/share.js         결과 카드 공유, 도전장 링크
 js/main.js          화면 연결
@@ -55,7 +54,7 @@ firestore.rules     Firestore 보안 규칙
 |---|---|---|
 | `nicknames` | 소문자 닉네임 | `uid`, `nickname` (닉네임 점유) |
 | `players` | uid | `nickname`, `nickKey`, `createdAt`, `updatedAt` |
-| `scores_normal`, `scores_blind` | uid | `best`(오차), `bestLen`, `bestAt`, `tries`, `lastLen`, `lastAt` |
+| `scores_normal` | uid | `best`(오차), `bestLen`, `bestAt`, `tries`, `lastLen`, `lastAt` |
 
 ## 알아둘 점
 

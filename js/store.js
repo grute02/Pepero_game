@@ -5,7 +5,7 @@ import { nextRecord } from './sim.js';
 const SDK = 'https://www.gstatic.com/firebasejs/12.19.0';
 const LS_KEY = 'stick0111.v2';
 const COL = { normal: 'scores_normal', blind: 'scores_blind' };
-export const MODES = ['normal', 'blind'];
+export const MODES = ['normal'];
 export const NICK_RE = /^[0-9A-Za-z가-힣_-]{2,12}$/;
 
 export function createStore(onChange) {
@@ -14,13 +14,13 @@ export function createStore(onChange) {
     note: '', noteTone: '',
     ready: false,
     uid: null, nickname: '',
-    mine: { normal: null, blind: null },
-    boards: { normal: [], blind: [] },
-    loaded: { normal: false, blind: false },
+    mine: { normal: null },
+    boards: { normal: [] },
+    loaded: { normal: false },
     names: new Map(),
   };
   let fb = null;
-  const queues = { normal: { busy: false, body: null }, blind: { busy: false, body: null } };
+  const queues = { normal: { busy: false, body: null } };
   const emit = () => onChange(st);
   const setNote = (text, tone = '') => { st.note = text; st.noteTone = tone; emit(); };
 
