@@ -7,7 +7,8 @@ const $ = (id) => document.getElementById(id);
 const el = {
   len: $('len'), goal: $('goal'), status: $('status'), result: $('result'),
   rDiff: $('rDiff'), rNote: $('rNote'), rChal: $('rChal'),
-  again: $('again'), shareCard: $('shareCard'), shareLink: $('shareLink'),
+  again: $('again'), shareCard: $('shareCard'), shareLink: $('shareLink'), showRank: $('showRank'),
+  rankDlg: $('rankDlg'), rankSub: $('rankSub'), rankMe: $('rankMe'), rankList: $('rankList'), rankNick: $('rankNick'),
   stage: $('stage'), cv: $('cv'), flash: $('flash'),
   whoBtn: $('whoBtn'), whoName: $('whoName'), whoEdit: $('whoEdit'),
   ranks: $('ranks'), recent: $('recent'), note: $('note'),
@@ -38,7 +39,7 @@ const insetProbe = document.createElement('div');
 insetProbe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding-bottom:env(safe-area-inset-bottom,0px)';
 document.body.append(insetProbe);
 
-const store = createStore(() => { renderWho(); renderBoard(); renderNote(); });
+const store = createStore(() => { renderWho(); renderBoard(); renderNote(); if (el.rankDlg.open) renderSheet(); });
 
 // ---------- game ----------
 function start() {
@@ -154,7 +155,7 @@ function setBoard(id) {
 for (const b of document.querySelectorAll('.tabs button')) b.addEventListener('click', () => setBoard(b.dataset.board));
 
 function handleAct(ts) {
-  if (el.dlg.open) return;
+  if (el.dlg.open || el.rankDlg.open) return;
   if (state === 'ready') start();
   else if (state === 'running') stopAt(ts);
   else if (performance.now() - doneAt > 600) start();
@@ -168,7 +169,7 @@ el.stage.addEventListener('pointerdown', (e) => {
   handleAct(evTime(e));
 });
 document.addEventListener('keydown', (e) => {
-  if (el.dlg.open) return;
+  if (el.dlg.open || el.rankDlg.open) return;
   if (e.code !== 'Space' && e.key !== ' ' && e.key !== 'Enter') return;
   const t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON')) return;
@@ -331,27 +332,25 @@ function rel(ts) {
   return d.getMonth() + 1 + '/' + d.getDate();
 }
 
-function renderBoard() {
-  const st = store.st;
-  const mine = st.mine[boardMode];
-  $('mBest').textContent = hasBest(mine) ? mine.bestLen.toFixed(3) + 'cm' : '—';
-  $('mErr').textContent = hasBest(mine) ? '±' + mine.best.toFixed(3) : '—';
-  $('mTries').textContent = ((mine && mine.tries) || 0) + '판';
+const nameOf = (id) => store.st.names.get(id) || (id === store.st.uid ? store.st.nickname || '나' : '이름 없음');
 
-  const nameOf = (id) => st.names.get(id) || (id === st.uid ? st.nickname || '나' : '이름 없음');
-  const all = st.boards[boardMode] || [];
-  const rows = all
+function rankedRows(mode) {
+  return (store.st.boards[mode] || [])
     .filter(hasBest)
     .sort((a, b) => a.best - b.best || (a.bestAt || 0) - (b.bestAt || 0));
+}
 
-  el.ranks.replaceChildren();
-  if (!st.loaded[boardMode] && st.kind !== 'local') {
+function fillRanks(list, mode) {
+  const st = store.st;
+  const rows = rankedRows(mode);
+  list.replaceChildren();
+  if (!st.loaded[mode] && st.kind !== 'local') {
     const li = document.createElement('li'); li.className = 'empty'; li.textContent = '순위를 불러오는 중이에요…';
-    el.ranks.append(li);
+    list.append(li);
   } else if (!rows.length) {
     const li = document.createElement('li'); li.className = 'empty';
-    li.textContent = `${STICKS[boardMode].full} 기록이 아직 없어요. 첫 판을 하면 여기에 올라가요.`;
-    el.ranks.append(li);
+    li.textContent = `${STICKS[mode].full} 기록이 아직 없어요. 첫 판을 하면 여기에 올라가요.`;
+    list.append(li);
   }
   rows.forEach((r, i) => {
     const li = document.createElement('li');
@@ -366,25 +365,70 @@ function renderBoard() {
     who.append(nm, meta);
     const sc = document.createElement('span'); sc.className = 'sc'; sc.textContent = r.bestLen.toFixed(3);
     li.append(rk, who, sc);
-    el.ranks.append(li);
+    list.append(li);
   });
+  return rows;
+}
+
+function renderBoard() {
+  const st = store.st;
+  const mine = st.mine[boardMode];
+  $('mBest').textContent = hasBest(mine) ? mine.bestLen.toFixed(3) + 'cm' : '—';
+  $('mErr').textContent = hasBest(mine) ? '±' + mine.best.toFixed(3) : '—';
+  $('mTries').textContent = ((mine && mine.tries) || 0) + '판';
+
+  const rows = fillRanks(el.ranks, boardMode);
   $('boardSub').textContent = rows.length ? `${rows.length}명 참여 · 1인 최고 기록 · 0.111cm에 가까운 순` : '1인 최고 기록 · 0.111cm에 가까운 순';
 
   el.recent.replaceChildren();
-  const recent = all.filter((r) => r.lastAt).sort((a, b) => b.lastAt - a.lastAt).slice(0, 5);
+  const recent = (st.boards[boardMode] || []).filter((r) => r.lastAt).sort((a, b) => b.lastAt - a.lastAt).slice(0, 5);
   if (!recent.length) {
     const li = document.createElement('li');
-    const s = document.createElement('span'); s.className = 'rn'; s.textContent = '아직 기록이 없어요';
-    li.append(s); el.recent.append(li);
+    const sp = document.createElement('span'); sp.className = 'rn'; sp.textContent = '아직 기록이 없어요';
+    li.append(sp); el.recent.append(li);
   }
   for (const r of recent) {
     const li = document.createElement('li');
-    const a = document.createElement('span'); a.className = 'rn'; a.textContent = nameOf(r.id);
-    const b = document.createElement('span'); b.className = 'rv';
-    b.textContent = `${(typeof r.lastLen === 'number' ? r.lastLen : 0).toFixed(3)}cm · ${rel(r.lastAt)}`;
-    li.append(a, b); el.recent.append(li);
+    const x = document.createElement('span'); x.className = 'rn'; x.textContent = nameOf(r.id);
+    const y = document.createElement('span'); y.className = 'rv';
+    y.textContent = `${(typeof r.lastLen === 'number' ? r.lastLen : 0).toFixed(3)}cm · ${rel(r.lastAt)}`;
+    li.append(x, y); el.recent.append(li);
   }
 }
+
+// ---------- ranking sheet (opened from the result) ----------
+let sheetMode = 'normal';
+function renderSheet() {
+  const st = store.st;
+  const rows = fillRanks(el.rankList, sheetMode);
+  el.rankSub.textContent = `${STICKS[sheetMode].full} · ${rows.length}명 참여 · 0.111cm에 가까운 순`;
+  const idx = rows.findIndex((r) => r.id === st.uid);
+  const named = st.kind === 'local' || !!st.nickname;
+  el.rankNick.hidden = named;
+  if (!named) {
+    el.rankMe.textContent = '닉네임을 정하면 이번 기록부터 순위에 올라가요.';
+    el.rankMe.dataset.tone = 'warn';
+  } else if (idx >= 0) {
+    el.rankMe.textContent = `내 순위 ${idx + 1}위 / ${rows.length}명 · 최고 ${rows[idx].bestLen.toFixed(3)}cm`;
+    delete el.rankMe.dataset.tone;
+  } else {
+    el.rankMe.textContent = '아직 순위에 오른 기록이 없어요. 끝까지 다 먹기 전에 멈춰 보세요.';
+    delete el.rankMe.dataset.tone;
+  }
+  el.shareCard.hidden = !last;
+}
+function openSheet() {
+  sheetMode = last ? last.stick : stick;
+  renderSheet();
+  if (!el.rankDlg.open) el.rankDlg.showModal();
+  const me = el.rankList.querySelector('li.me');
+  if (me) me.scrollIntoView({ block: 'center' });
+}
+el.showRank.addEventListener('click', openSheet);
+$('rankClose').addEventListener('click', () => el.rankDlg.close());
+$('rankAgain').addEventListener('click', () => { el.rankDlg.close(); start(); });
+el.rankNick.addEventListener('click', () => { el.rankDlg.close(); openNick(); });
+el.rankDlg.addEventListener('click', (e) => { if (e.target === el.rankDlg) el.rankDlg.close(); });
 
 function renderNote() {
   const st = store.st;

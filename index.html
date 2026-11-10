@@ -35,7 +35,7 @@
           <p class="rchal" id="rChal" hidden></p>
           <div class="ractions">
             <button type="button" class="primary" id="again">다시 하기</button>
-            <button type="button" class="ghost" id="shareCard">결과 카드</button>
+            <button type="button" class="ghost" id="showRank">랭킹</button>
             <button type="button" class="ghost" id="shareLink">도전장</button>
           </div>
         </div>
@@ -92,6 +92,23 @@
       <button type="submit" class="primary" id="nickSave">시작하기</button>
     </div>
   </form>
+</dialog>
+
+<dialog class="sheet" id="rankDlg" aria-labelledby="rankTitle">
+  <div class="sheet-head">
+    <div>
+      <h2 id="rankTitle">팀 순위</h2>
+      <p class="sub" id="rankSub"></p>
+    </div>
+    <button type="button" class="link-btn" id="rankClose">닫기</button>
+  </div>
+  <p class="sheet-me" id="rankMe"></p>
+  <ol class="ranks sheet-list" id="rankList"></ol>
+  <div class="sheet-actions">
+    <button type="button" class="ghost" id="rankNick" hidden>닉네임 정하기</button>
+    <button type="button" class="ghost" id="shareCard">결과 카드 공유</button>
+    <button type="button" class="primary" id="rankAgain">다시 하기</button>
+  </div>
 </dialog>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
